@@ -18,6 +18,7 @@ package com.android.wallpaper.livepicker;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.WallpaperColors;
 import android.app.WallpaperInfo;
 import android.app.WallpaperManager;
 import android.content.ActivityNotFoundException;
@@ -29,6 +30,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.Resources.NotFoundException;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -118,9 +120,14 @@ public class LiveWallpaperPreview extends Activity {
         mWallpaperIntent = new Intent(WallpaperService.SERVICE_INTERFACE)
                 .setClassName(info.getPackageName(), info.getServiceName());
 
-        setActionBar((Toolbar) findViewById(R.id.toolbar));
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setActionBar(toolbar);
         getActionBar().setDisplayHomeAsUpEnabled(true);
         getActionBar().setDisplayShowTitleEnabled(false);
+
+        Drawable backArrow = getResources().getDrawable(R.drawable.ic_arrow_back_white_24dp);
+        backArrow.setAutoMirrored(true);
+        toolbar.setNavigationIcon(backArrow);
 
         mWallpaperManager = WallpaperManager.getInstance(this);
         mWallpaperConnection = new WallpaperConnection(mWallpaperIntent);
@@ -253,8 +260,11 @@ public class LiveWallpaperPreview extends Activity {
     }
 
     public void setLiveWallpaper(final View v) {
-        if (mWallpaperManager.getWallpaperId(WallpaperManager.FLAG_LOCK) < 0) {
-            // The lock screen does not have a wallpaper, so no need to prompt; can only set both.
+        if (mWallpaperManager.getWallpaperInfo() != null
+            && mWallpaperManager.getWallpaperId(WallpaperManager.FLAG_LOCK) < 0) {
+            // The lock screen does not have a distinct wallpaper and the current wallpaper is a
+            // live wallpaper, so since we cannot preserve any static imagery on the lock screen,
+            // set the live wallpaper directly without giving the user a destination option.
             try {
                 setLiveWallpaper(v.getRootView().getWindowToken());
                 setResult(RESULT_OK);
@@ -429,7 +439,12 @@ public class LiveWallpaperPreview extends Activity {
                     }
                     mEngine = null;
                 }
-                unbindService(this);
+                try {
+                    unbindService(this);
+                } catch (IllegalArgumentException e) {
+                    Log.w(LOG_TAG, "Can't unbind wallpaper service. "
+                            + "It might have crashed, just ignoring.", e);
+                }
                 mService = null;
             }
         }
@@ -475,9 +490,14 @@ public class LiveWallpaperPreview extends Activity {
                 }
             }
         }
-        
+
         public ParcelFileDescriptor setWallpaper(String name) {
             return null;
+        }
+
+        @Override
+        public void onWallpaperColorsChanged(WallpaperColors colors) throws RemoteException {
+
         }
 
         @Override
