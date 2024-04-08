@@ -43,9 +43,6 @@ android_app {
     required: ["android.software.live_wallpaper.xml"],
     platform_apis: true,
     privileged: true,
-    optimize: {
-        proguard_flags_files: ["proguard.flags"],
-    },
     static_libs: [
         "androidx.annotation_annotation",
         "androidx.appcompat_appcompat",
