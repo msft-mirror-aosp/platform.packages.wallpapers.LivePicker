@@ -20,7 +20,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="application_name" msgid="321870838342157591">"Live Wallpaper Picker"</string>
-    <string name="live_wallpaper_picker_title" msgid="6152733341691314608">"ライブ壁紙の選択"</string>
+    <string name="live_wallpaper_picker_title" msgid="6152733341691314608">"ライブ壁紙を選択"</string>
     <string name="live_wallpaper_picker_label" msgid="295628316836042825">"ライブ壁紙"</string>
     <string name="live_wallpaper_preview_title" msgid="908570871421455329">"ライブ壁紙のプレビュー"</string>
     <string name="configure_wallpaper" msgid="4308477548538487192">"設定..."</string>
