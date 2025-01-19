@@ -16,15 +16,18 @@
 
 package com.android.wallpaper.livepicker;
 
+import static android.app.WallpaperManager.FLAG_LOCK;
+import static android.app.WallpaperManager.FLAG_SYSTEM;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.WallpaperColors;
 import android.app.WallpaperInfo;
 import android.app.WallpaperManager;
+import android.app.WallpaperManager.SetWallpaperFlags;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
@@ -440,49 +443,39 @@ public class LiveWallpaperPreview extends Activity {
     }
 
     public void setLiveWallpaper(final View v) {
-        if (mWallpaperManager.getWallpaperInfo() != null
-                && mWallpaperManager.getWallpaperId(WallpaperManager.FLAG_LOCK) < 0) {
-            // The lock screen does not have a distinct wallpaper and the current wallpaper is a
-            // live wallpaper, so since we cannot preserve any static imagery on the lock screen,
-            // set the live wallpaper directly without giving the user a destination option.
-            try {
-                setLiveWallpaper(v.getRootView().getWindowToken());
-                setResult(RESULT_OK);
-            } catch (RuntimeException e) {
-                Log.w(LOG_TAG, "Failure setting wallpaper", e);
-            }
-            finish();
-        } else {
-            // Otherwise, prompt to either set on home or both home and lock screen.
-            final Context themedContext = new ContextThemeWrapper(this /* base */,
-                    android.R.style.Theme_DeviceDefault_Settings);
-            new AlertDialog.Builder(themedContext)
-                    .setTitle(R.string.set_live_wallpaper)
-                    .setAdapter(new WallpaperTargetAdapter(themedContext),
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    try {
-                                        setLiveWallpaper(v.getRootView().getWindowToken());
-                                        if (which == 1) {
-                                            // "Home screen and lock screen"; clear the lock
-                                            // screen so it
-                                            // shows through to the live wallpaper on home.
-                                            mWallpaperManager.clear(WallpaperManager.FLAG_LOCK);
-                                        }
-                                        setResult(RESULT_OK);
-                                    } catch (RuntimeException | IOException e) {
-                                        Log.w(LOG_TAG, "Failure setting wallpaper", e);
-                                    }
-                                    finish();
-                                }
-                            })
-                    .show();
-        }
+        final Context themedContext = new ContextThemeWrapper(this /* base */,
+                android.R.style.Theme_DeviceDefault_Settings);
+        new AlertDialog.Builder(themedContext)
+                .setTitle(R.string.set_live_wallpaper)
+                .setAdapter(new WallpaperTargetAdapter(themedContext),
+                        (dialog, which) -> {
+                            int flag;
+                            switch (which) {
+                                case 0:
+                                    flag = FLAG_SYSTEM;
+                                    break;
+                                case 1:
+                                    flag = FLAG_LOCK;
+                                    break;
+                                case 2:
+                                    flag = FLAG_SYSTEM | FLAG_LOCK;
+                                    break;
+                                default:
+                                    flag = FLAG_SYSTEM | FLAG_LOCK;
+                            }
+                            try {
+                                setLiveWallpaper(v.getRootView().getWindowToken(), flag);
+                                setResult(RESULT_OK);
+                            } catch (RuntimeException e) {
+                                Log.w(LOG_TAG, "Failure setting wallpaper", e);
+                            }
+                            finish();
+                        })
+                .show();
     }
 
-    private void setLiveWallpaper(IBinder windowToken) {
-        mWallpaperManager.setWallpaperComponent(mWallpaperIntent.getComponent());
+    private void setLiveWallpaper(IBinder windowToken, @SetWallpaperFlags int which) {
+        mWallpaperManager.setWallpaperComponentWithFlags(mWallpaperIntent.getComponent(), which);
         mWallpaperManager.setWallpaperOffsetSteps(0.5f /* xStep */, 0.0f /* yStep */);
         mWallpaperManager.setWallpaperOffsets(windowToken, 0.5f /* xOffset */, 0.0f /* yOffset */);
     }
@@ -647,7 +640,7 @@ public class LiveWallpaperPreview extends Activity {
                     mService.attach(this, root.getWindowToken(),
                             LayoutParams.TYPE_APPLICATION_MEDIA, true, root.getWidth(),
                             root.getHeight(), new Rect(0, 0, 0, 0), displayId,
-                            WallpaperManager.FLAG_SYSTEM, mInfo);
+                            FLAG_SYSTEM, mInfo);
                 } catch (RemoteException e) {
                     Log.w(LOG_TAG, "Failed attaching wallpaper; clearing", e);
                 }
